@@ -1,6 +1,5 @@
 export default {
-    // I don't like auto importing and choose not to use it
-    components: false,
+    components: true,
     head: {
         titleTemplate: 'Mastering Nuxt: %s',
         htmlAttrs: {
