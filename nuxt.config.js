@@ -15,4 +15,7 @@ export default {
     router: {
         prefetchLinks: false,
     },
+    buildModules: [
+        '@nuxtjs/dotenv',
+    ],
 };

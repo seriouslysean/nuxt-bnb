@@ -6,7 +6,9 @@
   "dependencies": {
     "nuxt": "^2.14.7"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@nuxtjs/dotenv": "^1.4.1"
+  },
   "scripts": {
     "dev": "nuxt",
     "build": "nuxt build",
