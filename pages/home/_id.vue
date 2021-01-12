@@ -9,61 +9,66 @@
     <img src="/images/star.svg" height="20" width="20" />{{ home.reviewValue }}<br>
     {{ home.guests }} guests, {{ home.bedrooms }} rooms, {{ home.beds }} beds, {{ home.bathrooms }} bath<br>
     {{ home.description }}<br>
+
     <div style="height:800px;width:800px;" ref="map"></div>
+
+    <div v-for="review in reviews" :key="review.objectID">
+        <img :src="review.reviewer.image" /><br>
+        {{ review.reviewer.name }}<br>
+        {{ formatDate(review.date) }}<br>
+        <short-text :text="review.comment" :target="150" /><br>
+    </div>
+
+    <img :src="user.image" /><br>
+    {{ user.name }}<br>
+    {{ formatDate(user.joined) }}<br>
+    {{ user.reviewCount }}<br>
+    {{ user.description }}<br>
 </div>
 </template>
 
 <script>
-import homes from '~/data/homes.json';
+const MAP_LOAD_INTERVAL = 200;
 
 export default {
     head() {
         return {
             title: this.home.title,
-            script: [...(this.googleMapsApiKey ? [{
-                src: `https://maps.googleapis.com/maps/api/js?key=${this.googleMapsApiKey}&libraries=places`,
-                hid: 'map',
-                defer: true,
-            }, {
-
-            }] : [])],
         }
     },
-    data() {
+    async asyncData({ params, $dataApi, error }) {
+        const responses = await Promise.all([
+            $dataApi.getHome(params.id),
+            $dataApi.getReviewsByHomeId(params.id),
+            $dataApi.getUserByHomeId(params.id),
+        ]);
+        const badResponse = responses.find(response => !response.ok)
+        if (badResponse) {
+            return error({
+                statusCode: badResponse.status,
+                message: badResponse.statusText,
+            });
+        }
+
         return {
-            home: {},
+            home: responses[0].json,
+            reviews: responses[1].json.hits,
+            user: responses[2].json.hits[0],
         };
     },
     mounted() {
-        this.initGoogleMap();
-    },
-    created() {
-        this.googleMapsApiKey = process.env.NB_GOOGLE_MAPS_API_KEY;
-        if (!this.googleMapsApiKey) {
-            console.error('Google Maps API key not set!');
-        }
-
-        const { id: homeId } = this.$route.params;
-        this.home = homes.find(home => home.objectID === homeId);
+        const { lat, lng } = this.home._geoloc;
+        this.$maps.showMap(this.$refs.map, lat, lng);
     },
     methods: {
-        initGoogleMap() {
-            if (!this.googleMapsApiKey) {
-                return;
-            }
-
-            const { lat, lng } = this.home._geoloc;
-            const position = new window.google.maps.LatLng(lat, lng);
-            const mapOptions = {
-                zoom: 18,
-                center: position,
-                disableDefaultUI: true,
-                zoomControl: true,
-            };
-            const map = new window.google.maps.Map(this.$refs.map, mapOptions);
-            const marker = new window.google.maps.Marker({ position });
-            marker.setMap(map);
+        formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString(
+                undefined, {
+                month: 'long',
+                year: 'numeric',
+            });
         },
-    },
+    }
 };
 </script>
