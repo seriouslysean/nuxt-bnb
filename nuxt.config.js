@@ -19,7 +19,28 @@ export default {
         '@nuxtjs/dotenv',
     ],
     plugins: [
-        '~plugins/dataApi',
-        '~plugins/map.client',
+        '~/plugins/dataApi',
+        '~/plugins/map.client',
     ],
+    buildModules: [
+        '@nuxtjs/tailwindcss',
+    ],
+    modules: [],
+    css: [
+        '~/assets/sass/app.scss',
+    ],
+    build: {
+        extractCSS: true,
+        loaders: {
+            limit: 0,
+        },
+    },
+    publicRuntimeConfig: {
+        algoliaAppId: process.env.NB_ALGOLIA_APP_ID,
+        algoliaAPIKey: process.env.NB_ALGOLIA_API_KEY,
+        googleMapsAPIKey: process.env.NB_GOOGLE_MAPS_API_KEY,
+    },
+    privateRuntimeConfig: {
+        // N/A
+    }
 };

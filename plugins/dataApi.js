@@ -1,11 +1,6 @@
-const APP_ID = process.env.NB_ALGOLIA_APP_ID;
-const API_KEY = process.env.NB_ALGOLIA_API_KEY;
-const FETCH_OPTS = {
-    headers: {
-        'X-Algolia-API-Key': API_KEY,
-        'X-Algolia-Application-Id': APP_ID,
-    },
-};
+let APP_ID;
+let API_KEY;
+let FETCH_OPTS;
 
 async function unwrap(response) {
     const json = await response.json();
@@ -90,10 +85,46 @@ async function getUserByHomeId(homeId) {
     }
 }
 
+async function getHomesByLocation(lat, lng, radiusInMeters = 1500) {
+    try {
+        if (!APP_ID || !API_KEY) {
+            const msg = 'Algolia API keys are not set';
+            console.error(msg);
+            throw new Error(msg);
+        }
+
+        return unwrap(
+            await fetch(`https://${APP_ID}-dsn.algolia.net/1/indexes/homes/query`, {
+                ...FETCH_OPTS,
+                method: 'POST',
+                body: JSON.stringify({
+                    aroundLatLng: `${lat},${lng}`,
+                    aroundRadius: radiusInMeters,
+                    hitsPerPage: 10,
+                    attributesToHighlight: [],
+                }),
+            }),
+        );
+    } catch(error) {
+        return getErrorResponse(error);
+    }
+}
+
 export default function dataApi(context, inject) {
+    const { algoliaAppId, algoliaAPIKey } = context.$config;
+    APP_ID = algoliaAppId;
+    API_KEY = algoliaAPIKey;
+    FETCH_OPTS = {
+        headers: {
+            'X-Algolia-API-Key': API_KEY,
+            'X-Algolia-Application-Id': APP_ID,
+        },
+    };
+
     inject('dataApi', {
         getHome,
         getReviewsByHomeId,
         getUserByHomeId,
+        getHomesByLocation,
     });
 }

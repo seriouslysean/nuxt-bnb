@@ -1,35 +1,15 @@
 <template>
-<div>
-    <div style="display:flex;">
-        <img v-for="image in home.images" :key="image" :src="image" height="200" width="150" />
+    <div class="app-container">
+        <PropertyGallery :images="home.images" />
+        <PropertyDetails :home="home" />
+        <PropertyDescription :home="home" />
+        <PropertyMap :home="home" />
+        <PropertyReviews :reviews="reviews" />
+        <PropertyHost :user="user" />
     </div>
-    {{ home.title }}<br>
-    ${{ home.pricePerNight }} / night<br>
-    <img src="/images/marker.svg" height="20" width="20" />{{ home.location.address }} {{ home.location.city }} {{ home.location.state }} {{ home.location.country }}<br>
-    <img src="/images/star.svg" height="20" width="20" />{{ home.reviewValue }}<br>
-    {{ home.guests }} guests, {{ home.bedrooms }} rooms, {{ home.beds }} beds, {{ home.bathrooms }} bath<br>
-    {{ home.description }}<br>
-
-    <div style="height:800px;width:800px;" ref="map"></div>
-
-    <div v-for="review in reviews" :key="review.objectID">
-        <img :src="review.reviewer.image" /><br>
-        {{ review.reviewer.name }}<br>
-        {{ formatDate(review.date) }}<br>
-        <short-text :text="review.comment" :target="150" /><br>
-    </div>
-
-    <img :src="user.image" /><br>
-    {{ user.name }}<br>
-    {{ formatDate(user.joined) }}<br>
-    {{ user.reviewCount }}<br>
-    {{ user.description }}<br>
-</div>
 </template>
 
 <script>
-const MAP_LOAD_INTERVAL = 200;
-
 export default {
     head() {
         return {
@@ -56,19 +36,5 @@ export default {
             user: responses[2].json.hits[0],
         };
     },
-    mounted() {
-        const { lat, lng } = this.home._geoloc;
-        this.$maps.showMap(this.$refs.map, lat, lng);
-    },
-    methods: {
-        formatDate(dateStr) {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString(
-                undefined, {
-                month: 'long',
-                year: 'numeric',
-            });
-        },
-    }
 };
 </script>

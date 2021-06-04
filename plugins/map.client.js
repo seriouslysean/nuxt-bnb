@@ -1,57 +1,107 @@
-const MAPS_API_KEY = process.env.NB_GOOGLE_MAPS_API_KEY;
+let IS_LOADED = false;
+let WAITING = [];
 
-let MAP_LOADED = false;
-let MAP_WAITING = null;
-
-function addScript() {
-    if (!MAPS_API_KEY) {
+function addScript(apiKey) {
+    if (!apiKey) {
         console.error('Maps API key is not set');
         return;
     }
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&libraries=places&callback=initMap`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap`;
     script.async = true;
-    window.initMap = initMap;
+    window.initMap = initGoogleMaps;
     document.head.appendChild(script);
 }
 
-function initMap() {
-    if (MAP_WAITING) {
-        const { canvas, lat, lng } = MAP_WAITING;
-        renderMap(canvas, lat, lng);
-        MAP_WAITING = null;
-    }
-
-    MAP_LOADED = true;
+function addToQueue(fn, args) {
+    WAITING.push({
+        fn,
+        args,
+    });
 }
 
-function showMap(canvas, lat, lng) {
-    if (!MAP_LOADED) {
-        MAP_WAITING = { canvas, lat, lng };
+function initGoogleMaps() {
+    IS_LOADED = true;
+
+    // Once the map is loaded, run the waiting calls
+    WAITING.forEach((item) => {
+        if (typeof item.fn === 'function') {
+            item.fn(...item.args);
+        }
+    });
+    WAITING = [];
+}
+
+function showMap(canvas, lat, lng, markers) {
+    if (!IS_LOADED) {
+        addToQueue(showMap, arguments);
         return;
     }
 
-    renderMap(canvas, lat, lng);
-}
-
-function renderMap(canvas, lat, lng) {
     const mapOptions = {
         zoom: 18,
         center: new window.google.maps.LatLng(lat, lng),
         disableDefaultUI: true,
         zoomControl: true,
+        styles: [{
+            featureType: 'poi.business',
+            elementType: 'labels.icon',
+            stylers: [{
+                visibility: 'off',
+            }],
+        }],
     };
     const map = new window.google.maps.Map(canvas, mapOptions);
-    const position = new window.google.maps.LatLng(lat, lng);
-    const marker = new window.google.maps.Marker({ position });
-    marker.setMap(map);
+
+    if (!markers) {
+        const position = new window.google.maps.LatLng(lat, lng);
+        const marker = new window.google.maps.Marker({ position });
+        marker.setMap(map);
+        return;
+    }
+
+    const bounds = new window.google.maps.LatLngBounds();
+    markers.forEach((home) => {
+        const position = new window.google.maps.LatLng(home.lat, home.lng);
+        const marker = new window.google.maps.Marker({
+            position,
+            label: {
+                text: `$${home.pricePerNight}`,
+                className: `marker home-${home.id}`,
+            },
+            icon: 'https://maps.gstatic.com/mapfiles/transparent.png',
+            clickable: false,
+        });
+        marker.setMap(map);
+        bounds.extend(position);
+    });
+
+    map.fitBounds(bounds);
+}
+
+function makeAutocomplete(input) {
+    if (!IS_LOADED) {
+        addToQueue(makeAutocomplete, arguments);
+        return;
+    }
+    const autocomplete = new window.google.maps.places.Autocomplete(input, {
+        types: ['(cities)'],
+    });
+    autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        input.dispatchEvent(new CustomEvent('changed', {
+            detail: place,
+        }));
+    });
 }
 
 export default function (context, inject) {
-    addScript();
+    const { googleMapsAPIKey } = context.$config;
+    addScript(googleMapsAPIKey);
 
     inject('maps', {
         showMap,
+        makeAutocomplete,
     });
 }
